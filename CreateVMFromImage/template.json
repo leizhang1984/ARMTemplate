@@ -27,7 +27,7 @@
         	"type": "String"
         },
         "password": {
-        	"defaultValue": "ThisisPass@word01",
+        	"defaultValue": "1234567890",
         	"type": "String"
         },
         "images_sqlvm01_image_20220604_externalid": {
