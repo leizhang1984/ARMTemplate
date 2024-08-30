@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "serverName": {
-            "Value": "leimysqldemo001"
+            "defaultValue": "leimysqldemo001"
         },
         "location": {
             "defaultValue": "germanywestcentral"
@@ -13,45 +13,45 @@
             "allowedValues":["GeneralPurpose","MemoryOptimized"]
         },
         "vCores": {
-            "value": 2
+            "defaultvalue": 2
         },
         "storageSizeGB": {
-            "value": 64
+            "defaultvalue": 64
         },
         "haEnabled": {
-            "value": "ZoneRedundant"
+            "defaultvalue": "ZoneRedundant"
         },
         "firewallRules": {
-            "value": {
+            "defaultvalue": {
                 "rules": []
             }
         },
         "backupRetentionDays": {
-            "value": 7
+            "defaultvalue": 7
         },
         "geoRedundantBackup": {
-            "value": "Disabled"
+            "defaultvalue": "Disabled"
         },
         "availabilityZone": {
-            "value": ""
+            "defaultvalue": ""
         },
         "vmName": {
-            "value": "Standard_D2ds_v4"
+            "defaultvalue": "Standard_D2ds_v4"
         },
         "storageIops": {
-            "value": 1000
+            "defaultvalue": 1000
         },
         "storageAutogrow": {
-            "value": "Enabled"
+            "defaultvalue": "Enabled"
         },
         "acceleratedLogs": {
-            "value": "Disabled"
+            "defaultvalue": "Disabled"
         },
         "standbyAvailabilityZone": {
-            "value": ""
+            "defaultvalue": ""
         },
         "autoIoScaling": {
-            "value": "Enabled"
+            "defaultvalue": "Enabled"
         },
         "guid": {
             "value": "1919f49438344762ac7cd3a3453f0159"
@@ -78,7 +78,7 @@
             "value": null
         },
         "version": {
-            "value": "8.0.21"
+            "defaultvalue": "8.0.21"
         }
     }
 }
