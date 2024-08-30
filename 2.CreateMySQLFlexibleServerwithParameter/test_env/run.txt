@@ -1,0 +1,10 @@
+cd D:\work\github\armtemplate\2.CreateMySQLFlexibleServerwithParameter\test_env
+
+$templateFile = "template.json"
+$parameterFile="parameters.json"
+
+New-AzResourceGroupDeployment `
+  -Name deployment001 `
+  -ResourceGroupName mysql-rg `
+  -TemplateFile $templateFile `
+  -TemplateParameterFile $parameterFile

@@ -37,7 +37,8 @@
             "defaultValue": ""
         },
         "standbyAvailabilityZone": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "version": {
             "type": "string"

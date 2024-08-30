@@ -3,67 +3,69 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "serverName": {
-            "defaultValue": "leimysqldemo001"
+            "value": "leimysqldemo009"
         },
         "location": {
-            "defaultValue": "germanywestcentral"
+            "value": "germanywestcentral"
         },
         "serverEdition": {
-            "defaultValue": "GeneralPurpose",
-            "allowedValues":["GeneralPurpose","MemoryOptimized"]
+            "value": "MemoryOptimized"
         },
         "vCores": {
-            "defaultvalue": 2
+            "value": 2
         },
         "storageSizeGB": {
-            "defaultvalue": 64
+            "value": 128
         },
         "haEnabled": {
-            "defaultvalue": "ZoneRedundant"
+            "value": "ZoneRedundant"
         },
         "firewallRules": {
-            "defaultvalue": {
+            "value": {
                 "rules": []
             }
         },
         "backupRetentionDays": {
-            "defaultvalue": 7
+            "value": 7
         },
         "geoRedundantBackup": {
-            "defaultvalue": "Disabled"
+            "value": "Disabled"
         },
         "availabilityZone": {
-            "defaultvalue": ""
+            "value": "",
+            "metadata": {
+                "description": "MySQL 主服务器使用的可用区,留空的话就是任意一个可用区"
+            }
         },
         "vmName": {
-            "defaultvalue": "Standard_D2ds_v4"
+            "value": "Standard_E2ds_v4"
         },
         "storageIops": {
-            "defaultvalue": 1000
+            "value": 2000
         },
         "storageAutogrow": {
-            "defaultvalue": "Enabled"
+            "value": "Enabled"
         },
         "acceleratedLogs": {
-            "defaultvalue": "Disabled"
+            "value": "Disabled"
         },
         "standbyAvailabilityZone": {
-            "defaultvalue": ""
+            "value": "",
+            "metadata": {
+                "description": "MySQL 备用服务器使用的可用区,留空的话就是任意一个可用区"
+            }
         },
         "autoIoScaling": {
-            "defaultvalue": "Enabled"
-        },
-        "guid": {
-            "value": "1919f49438344762ac7cd3a3453f0159"
+            "value": "Enabled"
         },
         "serverParameters": {
-            "defaultValue": [{"name":"require_secure_transport","value":"OFF","source":"user-override"},{"name":"connect_timeout","value":"30","source":"user-override"}]
+            "value": [{"name":"long_query_time","value":"30","source":"user-override"},{"name":"binlog_expire_logs_seconds","value":"3600","source":"user-override"},{"name":"require_secure_transport","value":"OFF","source":"user-override"},{"name":"connect_timeout","value":"30","source":"user-override"}]
         },
         "apiVersion": {
             "value": "2023-06-01-preview"
         },
         "network": {
-            "defaultValue": {
+            "value": {
                 "DelegatedSubnetResourceId": "/subscriptions/166157a8-9ce9-400b-91c7-1d42482b83d6/resourceGroups/mysql-rg/providers/Microsoft.Network/virtualNetworks/mysql-vnet/subnets/mysql-subnet",
                 "PrivateDnsZoneResourceId": "/subscriptions/166157a8-9ce9-400b-91c7-1d42482b83d6/resourceGroups/mysql-rg/providers/Microsoft.Network/privateDnsZones/privatelink.mysql.database.azure.com"
             }
@@ -72,13 +74,13 @@
             "value": {}
         },
         "administratorLogin": {
-            "defaultValuevalue": "mysqladmin"
+            "value": "mysqladmin"
         },
         "administratorLoginPassword": {
-            "value": null
+            "value": "Mypass@123456"
         },
         "version": {
-            "defaultvalue": "8.0.21"
+            "value": "8.0.21"
         }
     }
 }
