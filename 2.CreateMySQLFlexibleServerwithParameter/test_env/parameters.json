@@ -59,7 +59,7 @@
             "value": "Enabled"
         },
         "serverParameters": {
-            "value": [{"name":"long_query_time","value":"30","source":"user-override"},{"name":"binlog_expire_logs_seconds","value":"3600","source":"user-override"},{"name":"require_secure_transport","value":"OFF","source":"user-override"},{"name":"connect_timeout","value":"30","source":"user-override"}]
+            "value": [{"name":"long_query_time","value":"30","source":"user-override"},{"name":"binlog_expire_logs_seconds","value":"3600","source":"user-override"},{"name":"require_secure_transport","value":"OFF","source":"user-override"},{"name":"connect_timeout","value":"30","source":"user-override"},{"name":"max_connections","value":"1000","source":"user-override"}]
         },
         "apiVersion": {
             "value": "2023-06-01-preview"
