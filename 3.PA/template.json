@@ -1,0 +1,615 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "FirewallDnsName01": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique DNS Name for the Public IP used to access PANW Firewall VM"
+      },
+      "defaultValue": "pan-fw01"
+    },
+	"FirewallDnsName02": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique DNS Name for the Public IP used to access PANW Firewall VM"
+      },
+      "defaultValue": "pan-fw02"
+    },
+    "vmName01": {
+      "type": "string",
+      "metadata": {
+          "description": "Enter the name for your VM-Series Firewall"
+      },
+      "maxLength": 57,
+	  "defaultValue": "PANew01"
+    },
+	"vmName02": {
+      "type": "string",
+      "metadata": {
+          "description": "Enter the name for your VM-Series Firewall"
+      },
+      "maxLength": 57,
+	  "defaultValue": "PANew02"
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The username for the administrator account on the VM-Series firewall"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the administrator account for the VM-Series firewall" 
+      }
+    },
+    "bootstrapStorageAccount": {
+      "type": "string",
+      "metadata":{
+        "description": "The name of the storage account that contains the bootstrap file share"
+      }
+    },
+   "bootstrapStorageAccountAccessKey": {
+      "type": "securestring",
+      "metadata":{
+        "description": "The access key for the bootstrap storage account"
+      }
+   },
+  "bootstrapFileShare": {
+      "type": "string",
+      "metadata":{
+          "description": "The name of the file share that contains the bootstrap folders"
+      }
+   },
+  "bootstrapSharedDir": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata":{
+              "description": "(OPTIONAL) The directory name under file share that contains the bootstrap folders"
+      }
+  },
+    "imageVersion": {
+            "type": "string",
+            "allowedValues": [
+                "latest",
+                "10.1.4"
+            ],
+            "defaultValue": "10.1.4",
+            "metadata": {
+                "description": "PAN-OS Version"
+            }
+    },
+    "imageSKU": {
+      "type": "string",
+      "defaultValue": "byol",
+      "allowedValues": [
+                "byol",
+                "bundle1",
+                "bundle2"
+            ],
+      "metadata": {
+        "description": "Image SKU"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_DS3_v2",
+      "allowedValues": [
+                "Standard_D3",
+                "Standard_D4",
+                "Standard_D3_v2",
+                "Standard_D4_v2",
+                "Standard_D5_v2",
+                "Standard_D3_v3",
+                "Standard_D4_v3",
+                "Standard_D8_v3",
+                "Standard_D16_v3",
+                "Standard_DS3_v2",
+                "Standard_DS4_v2",
+                "Standard_DS5_v2",
+                "Standard_DS3_v3",
+                "Standard_DS4_v3",
+                "Standard_DS16_v3",
+                "Standard_A4",
+                "Standard_F8s_v2",
+                "Standard_F32s_v2",
+                "Standard_D8s_v3",
+                "Standard_D16s_v3",
+                "Standard_D2_v4",
+                "Standard_D4_v4",
+                "Standard_D8_v4",
+                "Standard_D16_v4"
+            ],
+      "metadata": {
+        "description": "Azure VMsize for VM-Series Firewall. Find the supported instance size at https://docs.paloaltonetworks.com/vm-series/10-1/vm-series-performance-capacity/vm-series-performance-capacity/vm-series-on-azure-models-and-vms"
+      }
+    },
+    "AddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.200.0.0/16",
+      "metadata": {
+        "description": "The CIDR range for the Security VNET"
+      }
+    },
+    "ManagementSubnet": {
+      "type": "string",
+      "defaultValue": "10.200.1.0/24",
+      "metadata": {
+        "description": "Subnet Prefix for Security management subnet"
+      }
+    },
+    "DataSubnet": {
+      "type": "string",
+      "defaultValue": "10.200.0.0/24",
+      "metadata": {
+        "description": "Subnet Prefix for Security Data subnet"
+      }
+    }
+  },
+  "variables": {
+	//第一台PA
+    "secDataNicName01": "secDataNic01",
+    "secMgmtNicName01": "secMgmtNic01",
+    "secVMName01": "[parameters('vmName01')]",
+    //第二台PA
+	"secDataNicName02": "secDataNic02",
+    "secMgmtNicName02": "secMgmtNic02",
+    "secVMName02": "[parameters('vmName02')]",
+    "secVNetName": "secVnet",
+    "gwLBName": "securityGWLB",
+    "gwLBFeipName": "FEIpconfig1",
+    "networkSecurityGroupName": "networkSecurityGroup1",
+    "secLBID": "[resourceId('Microsoft.Network/loadBalancers',variables('gwLBName'))]",
+    "secVNetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('secVNetName'))]",
+    "secAddressPrefix": "[parameters('AddressPrefix')]",
+    "secLBProbeName": "sec_http_health_probe",
+    "secMgmtSubnet": "Subnet-mgmt",
+    "secDataSubnet": "Subnet-data",
+    "secMgmtSubnetPrefix": "[parameters('ManagementSubnet')]",
+    "secDataSubnetPrefix": "[parameters('DataSubnet')]",
+    "secDataSubnetId": "[concat(variables('secVNetID'),'/subnets/',variables ('secDataSubnet'))]",
+    "secMgmtSubnetId": "[concat(variables('secVNetID'),'/subnets/',variables ('secMgmtSubnet'))]",
+	//第1个公网IP
+    "fwpublicIPName01": "fwPublicIP01",
+	//第1个公网IP的DNS Name
+	"dnsnamefw01": "[parameters('FirewallDnsName01')]",
+	//第2个公网IP
+	"fwpublicIPName02": "fwPublicIP02",
+	//第2个公网IP的DNS Name
+	"dnsnamefw02": "[parameters('FirewallDnsName02')]",
+    "publicIPAddressType": "Static",
+    "imagePublisher": "paloaltonetworks",
+    "imageOffer": "vmseries-flex",
+    "customDataField": "[concat('storage-account=', parameters('bootstrapStorageAccount'), ',access-key=', parameters('bootstrapStorageAccountAccessKey'), ',file-share=', parameters('bootstrapFileShare'),',share-directory=', parameters('bootstrapSharedDir'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2016-03-30",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "unblock_all_tcp_rule",
+            "properties": {
+              "description": "unblock_all_tcp_rule",
+              "protocol": "Tcp",
+              "sourcePortRange": "0-65535",
+              "destinationPortRange": "0-65535",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "0.0.0.0/0",
+              "access": "Allow",
+              "priority": 123,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "unblock_all_tcp_outrule",
+            "properties": {
+              "description": "unblock_all_tcp_outrule",
+              "protocol": "Tcp",
+              "sourcePortRange": "0-65535",
+              "destinationPortRange": "0-65535",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "0.0.0.0/0",
+              "access": "Allow",
+              "priority": 123,
+              "direction": "Outbound"
+            }
+          },
+          {
+            "name": "unblock_all_udp_ports",
+            "properties": {
+              "description": "Unblock_all_udp_ports",
+              "protocol": "Udp",
+              "sourcePortRange": "0-65535",
+              "destinationPortRange": "0-65535",
+              "sourceAddressPrefix": "0.0.0.0/0",
+              "destinationAddressPrefix": "0.0.0.0/0",
+              "access": "Allow",
+              "priority": 125,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('secVNetName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('secAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('secMgmtSubnet')]",
+            "properties": {
+              "addressPrefix": "[variables('secMgmtSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          },
+          {
+            "name": "[variables('secDataSubnet')]",
+            "properties": {
+              "addressPrefix": "[variables('secDataSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+	//第1个虚拟机的第2个网卡，只有内网，启用了IP Forward
+    {
+      "apiVersion": "2021-05-01",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('secDataNicName01')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('secVNetName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('gwLBName'))]"
+      ],
+      "properties": {
+		//enable IP Forward
+        "enableIPForwarding": true,
+        "enableAcceleratedNetworking": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig2",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('secDataSubnetId')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('secLBID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2021-05-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('fwpublicIPName01')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsnamefw01')]"
+        }
+      }
+    },
+	//第1个虚拟机的，第1个网卡,有公网IP地址
+    {
+      "apiVersion": "2016-09-01",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('secMgmtNicName01')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('secVNetName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('fwpublicIPName01'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                     "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('fwpublicIPName01'))]"
+              },
+              "subnet": {
+                "id": "[variables('secMgmtSubnetId')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+
+
+	////////////////////////////////////
+	//////////////////////////////////////
+	///////////////////////////////////////
+	//第2个虚拟机的第2个网卡，只有内网，启用了IP Forward
+    {
+      "apiVersion": "2021-05-01",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('secDataNicName02')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('secVNetName'))]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('gwLBName'))]"
+      ],
+      "properties": {
+		//enable IP Forward
+        "enableIPForwarding": true,
+        "enableAcceleratedNetworking": true,
+        "ipConfigurations": [
+          {
+            "name": "ipconfig2",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('secDataSubnetId')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('secLBID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2021-05-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('fwpublicIPName02')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsnamefw02')]"
+        }
+      }
+    },
+	//第2个虚拟机的，第1个网卡,有公网IP地址
+    {
+      "apiVersion": "2016-09-01",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('secMgmtNicName02')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('secVNetName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('fwpublicIPName02'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                     "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('fwpublicIPName02'))]"
+              },
+              "subnet": {
+                "id": "[variables('secMgmtSubnetId')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2020-08-01",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('gwLBName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('secVNetName'))]"
+      ],
+      "sku": {
+        "name": "Gateway"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[variables('gwLBFeipName')]",
+            "properties": {
+              "subnet": {
+                "id": "[variables('secDataSubnetId')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1",
+            "properties": {
+              "tunnelInterfaces": [
+                {
+                  "port": 2000,
+                  "Identifier": 800,
+                  "Protocol": "VxLan",
+                  "Type": "Internal"
+                },
+                {
+                  "port": 2001,
+                  "Identifier": 801,
+                  "Protocol": "VxLan",
+                  "Type": "External"
+                }
+              ]
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "LbRule1",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('secLBID'),'/frontendIPConfigurations/FEIpconfig1')]"
+              },
+              "backendPort": 0,
+              "frontendPort": 0,
+              "protocol": "All",
+              "BackendAddressPools": [
+                {
+                  "id": "[concat(variables('secLBID'),'/backendAddressPools/BackendPool1')]"
+                }
+              ],
+              "probe": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', variables('gwLBName'), variables('secLBProbeName'))]"
+              }
+            }
+          }
+        ],
+        "probes": [
+            {
+              "name": "[variables('secLBProbeName')]",
+              "type": "Microsoft.Network/loadBalancers/probes",
+              "properties": {
+                  "protocol": "Tcp",
+                  "port": 80,
+                  "intervalInSeconds": 5,
+                  "numberOfProbes": 2
+              }
+            }
+        ]
+      }
+    },
+	///第1台虚拟机
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('secVMName01')]",
+      "apiVersion": "2016-04-30-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('secMgmtNicName01'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('secDataNicName01'))]"
+      ],
+      "plan": {
+         "name": "[parameters('imageSKU')]",
+         "product": "[variables('imageOffer')]",
+         "publisher": "[variables('imagePublisher')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('secVMName01')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[base64(variables('customDataField'))]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[parameters('imageSKU')]",
+            "version": "[parameters('imageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('secMgmtNicName01'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('secDataNicName01'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        }
+      }
+    },
+	///第2台虚拟机
+	{
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('secVMName02')]",
+      "apiVersion": "2016-04-30-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('secMgmtNicName02'))]",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('secDataNicName02'))]"
+      ],
+      "plan": {
+         "name": "[parameters('imageSKU')]",
+         "product": "[variables('imageOffer')]",
+         "publisher": "[variables('imagePublisher')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('secVMName02')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[base64(variables('customDataField'))]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[parameters('imageSKU')]",
+            "version": "[parameters('imageVersion')]"
+          },
+          "osDisk": {
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('secMgmtNicName02'))]",
+              "properties": {
+                "primary": true
+              }
+            },
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('secDataNicName02'))]",
+              "properties": {
+                "primary": false
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
